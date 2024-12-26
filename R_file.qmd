@@ -1,0 +1,1578 @@
+---
+title: "Text Analysis"
+author: "Sagnik Chand"
+format:
+  html:
+    embed-resources: true
+    self-contained-math: true
+---
+
+# Analyzing Student Sentiments and Challenges in Learning Data Science: A Reddit-Based Study
+
+In recent years, data science has emerged as a highly sought-after field, offering students promising career prospects but also presenting unique challenges. This project aims to understand the sentiments and perceptions of students as they navigate the complexities of learning data science, particularly through their discussions on Reddit. By analyzing posts from subreddits such as r/datascience, r/datasciencestudents, r/learndatascience and r/learnmachinelearning, I seek to identify recurring themes, emotions, and experiences shared by students. My research question focuses on understanding what common challenges, frustrations, and positive aspects students express while learning data science. Through text analysis techniques such as sentiment analysis, topic modeling, and word frequency analysis, this study will explore the sentiments behind their experiences, ranging from enthusiasm for the subject matter to frustration over the steep learning curve. The goal is to provide a deeper insight into the student learning journey, which may help educators, institutions, and course developers improve data science education, making it more accessible and effective for future learners.
+
+## Research Question:
+
+What are students' common themes and sentiments regarding their experiences and challenges in learning data science?
+
+## Hypothesis:
+
+Students express a combination of excitement about the opportunities in data science, paired with frustration stemming from the complexity of the subject matter and steep learning curve.
+
+## Loading Packages
+
+```{r,echo=TRUE,results='hide'}
+library(tidyverse)
+library(tidytext)
+library(RedditExtractoR)
+library(dplyr)
+library(quanteda)
+library(quanteda.textplots)
+library(quanteda.textstats)
+library(text2vec)
+```
+
+## Learn Data Science Reddit
+
+## Scraping Data
+
+```{r}
+# Get the Reddit thread URLs for the "learndatascience" subreddit
+
+# Learn_DS_urls <- find_thread_urls(subreddit = "learndatascience", sort_by = "new", period = "hour")
+
+# Slicing to keep top 50 URLS with most comments
+
+# Learn_DS_urls <- Learn_DS_urls %>% 
+  # arrange(desc(comments)) %>% 
+  # slice_head(n=50)
+
+# View the URLs fetched
+
+# head(Learn_DS_urls)
+
+# We are also interested in the actual text and title content of the post as well, along with the comments.
+
+# LDS_Text_Post <- Learn_DS_urls$text
+
+# LDS_Title <- Learn_DS_urls$title
+
+# Downloading Comments
+
+# LDS_Content <- get_thread_content(Learn_DS_urls$url)
+
+# View the Comments
+
+# View(LDS_Content$comments)
+
+# LDS_Comments <- LDS_Content$comments
+ 
+# Store the text data in a separate object
+
+# Learn_DS_Text <- LDS_Content$comments$comment
+
+ # Saving the text data as a RDA file
+
+ #save(Learn_DS_Text, file = "LDS_Text.rda")
+ #save(LDS_Text_Post, file = "LDS_Text_Post.rda")
+ #save(LDS_Title, file = "LDS_Title.rda")
+
+# Loading in the text data RDA file
+
+load("LDS_Text.rda")
+load("LDS_Text_Post.rda")
+load("LDS_Title.rda")
+```
+
+## Preprocessing Data
+
+```{r}
+# Create a corpus from text data
+
+Corpus_LDS <- corpus(Learn_DS_Text)
+
+# Tokenize, remove punctuation, numbers, symbols, and stopwords in one step
+LDS_dfm <- tokens(Corpus_LDS, 
+                 remove_punct = TRUE,
+                 remove_numbers = TRUE,
+                 remove_symbols = TRUE) %>%
+          tokens_remove(pattern = stopwords("en")) %>%  # Directly remove stopwords
+          tokens_remove(pattern = c("data", "science", "ds", "x", "y", "gt","r","t","m","s","b")) %>% 
+          dfm()
+```
+
+We removed various words that are abbreviations or placeholders (like 'X' and 'Y') to enhance the clarity of the analysis and better understand the underlying themes in the text.
+
+## Wordcloud
+
+```{r}
+# Create a word cloud
+
+set.seed(196)
+
+textplot_wordcloud(LDS_dfm,
+                   min_count = 7,
+                   random_order = FALSE)
+```
+
+The word cloud was generated from text collected from the "Learn Data Science" subreddit. Some of the prominent terms include "learning," "need," "help," "Python," "like," "course," and "can," reflecting a mix of sentiments among those starting their data science journey. The community appears to be cooperative and supportive, with many individuals sharing their learning experiences and others seeking assistance, engaging in discussions, and exchanging ideas.
+
+Key data science concepts and tools mentioned include Python, SQL, analysis, deep learning, and machine learning, indicating a strong interest in pursuing and mastering these skills.
+
+## Summary Tables
+
+```{r}
+
+# Word Frequency Table
+
+word_freq_table_LDS <- textstat_frequency(LDS_dfm, n = 10) %>%
+  select(feature, frequency) %>%  # 'feature' is the word, 'frequency' is its count
+  rename(Word = feature, Freq = frequency) %>%  # Rename for clarity
+  arrange(desc(Freq))
+
+print(word_freq_table_LDS)
+
+```
+
+Here, we have a word frequency table for statistical analysis. The most frequently occurring words, such as "can," "just," "get," and "need," suggest that community members are expressing their confusions, doubts, and requests for support. The word "can" has the highest frequency, indicating that many comments and pieces of text reflect questions being asked or answers being provided using this term. This highlights a strong culture of mutual assistance in the community.
+
+Additionally, Python appears prominently, indicating it is viewed as a crucial skill for individuals in the field of data science.
+
+Let's explore other Reddit communities related to data science.
+
+## Data Science Reddit
+
+## Scraping Data
+
+```{r}
+# Get the Reddit thread URLs for the "datascience" subreddit
+
+# DS_urls <- find_thread_urls(subreddit = "datascience", sort_by = "new", period = "hour")
+
+# Slicing to keep top 50 URLS with most comments
+
+# DS_urls <- DS_urls %>% 
+  #arrange(desc(comments)) %>% 
+  #slice_head(n=50)
+
+# View the URLs fetched
+
+# head(DS_urls)
+
+# We are also interested in the actual text and title content of the post as well, along with the comments.
+
+# DS_Text_Post <- DS_urls$text
+# DS_Title <- DS_urls$title
+
+# Downloading Comments
+
+# DS_Content <- get_thread_content(DS_urls$url)
+
+# View the Comments
+
+# DS_Comments <- DS_Content$comments
+ 
+ # View(DS_Content$comments)
+
+# Store the text data in a separate object
+
+# DS_Text <- DS_Content$comments$comment
+
+# Saving the text data as a RDA file
+
+# save(DS_Text, file = "DS_Text.rda")
+# save(DS_Text_Post, file = "DS_Text_Post.rda")
+# save(DS_Title, file = "DS_Title.rda")
+
+# Loading in the text data RDA file
+
+load("DS_Text.rda")
+load("DS_Text_Post.rda")
+load("DS_Title.rda")
+```
+
+## Preprocessing Data
+
+```{r}
+# Creating a corpus from text data
+
+Corpus_DS <- corpus(DS_Text)
+
+# Tokenize, remove punctuation, numbers, symbols, and stopwords
+
+DS_dfm <- tokens(Corpus_DS, 
+                 remove_punct = TRUE,
+                 remove_numbers = TRUE,
+                 remove_symbols = TRUE) %>%
+          tokens_tolower() %>% 
+          tokens_remove(pattern = stopwords("en")) %>%  # Directly remove stopwords
+          tokens_remove(pattern = c("data", "science", "ds", "x", "y", "m","cv","g","r","b","d","t","can","s")) %>%  # Remove specific words
+          dfm()
+
+```
+
+## Wordcloud
+
+```{r}
+# Create a word cloud
+
+set.seed(197)
+
+textplot_wordcloud(DS_dfm,
+                   min_count = 100,
+                   random_order = FALSE)
+```
+
+The word cloud reveals that this subreddit primarily focuses on data science experiences within professional contexts, such as research, work, and job-related discussions. The most frequently used terms include "job," "like," "work," "experience," "company," and "time." Additionally, members are discussing various job types, including scientist, analyst, and tech positions.
+
+Python and SQL continue to be prominent, underscoring their importance in the field of data science. There are also conversations about interviews, questions, and job roles, indicating a strong emphasis on professional scenarios within the data science community.
+
+## Summary Tables
+
+```{r}
+# Word Frequency Table
+
+word_freq_table_DS <- textstat_frequency(DS_dfm, n = 10) %>%
+  select(feature, frequency) %>%  # 'feature' is the word, 'frequency' is its count
+  rename(Word = feature, Freq = frequency) %>%  # Rename for clarity
+  arrange(desc(Freq))
+
+print(word_freq_table_DS)
+
+```
+
+This word frequency table displays the most commonly used words in a dataset, along with their corresponding frequencies. The top word, "just," appears 1,375 times, followed closely by "like" with 1,345 occurrences. Other notable terms include "work" (1,124), "job" (1,119), and "get" (1,094), indicating a strong focus on employment-related themes.
+
+The table also highlights social dynamics with words like "people" (1,005), reflecting community interactions. Additionally, "time" (958), "think" (809), "one" (802), and "know" (780) suggest discussions that revolve around personal experiences and reflections. Overall, this frequency table illustrates the prevalent topics and sentiments within the data, emphasizing the importance of work and community in the context being analyzed.
+
+## Learn Machine Learning Reddit
+
+## Scraping Data
+
+```{r}
+# Get the Reddit thread URLs for the "datascience" subreddit
+
+# LML_urls <- find_thread_urls(subreddit = "learnmachinelearning", sort_by = "new", period = "hour")
+
+# Slicing to keep top 50 URLS with most comments
+
+# LML_urls <- LML_urls %>% 
+  #arrange(desc(comments)) %>% 
+  #slice_head(n=50)
+
+# View the URLs fetched
+
+# head(LML_urls)
+
+# We are also interested in the actual text and title content of the post as well, along with the comments.
+
+#LML_Text_Post <- LML_urls$text
+#LML_Title <- LML_urls$title
+
+# Downloading Comments
+
+ #LML_Content <- get_thread_content(LML_urls$url)
+
+# View the Comments
+
+ #LML_Comments <- LML_Content$comments
+# View(LML_Content$comments)
+
+# Store the text data in a separate object
+
+# LML_Text <- LML_Content$comments$comment
+
+# Saving the text data as a RDA file
+
+# save(LML_Text, file = "LML_Text.rda")
+# save(LML_Text_Post, file = "LML_Text_Post.rda")
+# save(LML_Title, file = "LML_Title.rda")
+
+# Loading in the text data RDA file
+
+load("LML_Text.rda")
+load("LML_Text_Post.rda")
+load("LML_Title.rda")
+```
+
+## Preprocessing Data
+
+```{r}
+# Creating a corpus from text data
+
+Corpus_LML <- corpus(LML_Text)
+
+# Tokenize, remove punctuation, numbers, symbols, and stopwords
+
+LML_dfm <- tokens(Corpus_LML, 
+                 remove_punct = TRUE,
+                 remove_numbers = TRUE,
+                 remove_symbols = TRUE) %>%
+          tokens_tolower() %>% 
+          tokens_remove(pattern = stopwords("en")) %>%  # Directly remove stopwords
+          tokens_remove(pattern = c("data", "science", "ds", "x", "y", "m","cv","g","r","b","d","t","s","ml")) %>%  # Remove specific words
+          dfm()
+
+```
+
+## Wordcloud
+
+```{r}
+# Create a word cloud
+
+set.seed(197)
+
+textplot_wordcloud(LML_dfm,
+                   min_count = 30,
+                   random_order = FALSE)
+```
+
+The word cloud reveals that the most frequently used terms include "learning," "can," "work," and "time," all of which relate to community members sharing their current projects and job responsibilities. Additionally, terms like "models" and "projects" indicate a focus on machine learning models that individuals are exploring.
+
+The presence of words like "AI" suggests that community members are applying machine learning techniques to artificial intelligence, while also discussing their experiences in the field. Overall, this reflects a healthy community with a growth mindset, where individuals are actively helping each other and fostering collaboration.
+
+## Summary Tables
+
+```{r}
+# Word Frequency Table
+
+word_freq_table_LML <- textstat_frequency(LML_dfm, n = 10) %>%
+  select(feature, frequency) %>%  # 'feature' is the word, 'frequency' is its count
+  rename(Word = feature, Freq = frequency) %>%  # Rename for clarity
+  arrange(desc(Freq))
+
+print(word_freq_table_LML)
+
+```
+
+This word frequency table presents the most commonly used words from text data collected from Reddit discussions about learning machine learning. The top word, "can," appears 488 times, suggesting a focus on capabilities and potential actions within the learning process. "Like" (389) and "just" (360) also feature prominently, indicating personal expressions and comparisons.
+
+The term "learning" ranks fourth with 341 occurrences, underscoring the central theme of education in machine learning. Other notable words include "work" (310), "get" (299), and "AI" (255), highlighting the relevance of artificial intelligence in these conversations. The words "time" (250), "think" (238), and "also" (235) reflect participants' considerations and reflections on their learning journeys.
+
+Overall, this frequency table captures the key themes and sentiments within the Reddit community, emphasizing a collaborative environment focused on skill development in machine learning.
+
+## Data Science Students Reddit
+
+## Scraping Data
+
+```{r}
+# Get the Reddit thread URLs for the "datasciencestudents" subreddit
+
+# DSS_urls <- find_thread_urls(subreddit = "datasciencestudents", sort_by = "new", period = "hour")
+
+# Slicing to keep top 50 URLS with most comments
+
+#DSS_urls <- DSS_urls %>% 
+  #arrange(desc(comments)) %>% 
+  #slice_head(n=50)
+
+# View the URLs fetched
+
+#head(DSS_urls)
+
+# We are also interested in the actual text and title content of the post as well, along with the comments.
+
+#DSS_Text_Post <- DSS_urls$text
+#DSS_Title <- DSS_urls$title
+
+# Downloading Comments
+
+#DSS_Content <- get_thread_content(DSS_urls$url)
+
+# View the Comments
+
+#DSS_Comments <- DSS_Content$comments
+#View(DSS_Content$comments)
+
+# Store the text data in a separate object
+
+#DSS_Comm <- DSS_Content$comments$comment
+
+# Saving the Post title, text and comments data as a RDA file
+
+#save(DSS_Comm, file = "DSS_Text_Post.rda")
+#save(DSS_Text, file = "DSS_Text.rda")
+#save(DSS_Title, file = "DSS_Title.rda")
+
+
+# Loading in the text data RDA file
+
+ 
+load("DSS_Text_Post.rda")
+load("DSS_Text.rda")
+load("DSS_Title.rda")
+
+```
+
+
+## Preprocessing Data
+
+```{r}
+# Creating a corpus from text data
+
+Corpus_DSS <- corpus(DSS_Text)
+DSS_Post_Corpus <- corpus(DSS_Text_Post)
+
+
+# Tokenize, remove punctuation, numbers, symbols, and stopwords
+
+DSS_dfm <- tokens(Corpus_DSS, 
+                 remove_punct = TRUE,
+                 remove_numbers = TRUE,
+                 remove_symbols = TRUE) %>%
+          tokens_tolower() %>% 
+          tokens_remove(pattern = stopwords("en")) %>%  # Directly remove stopwords
+          tokens_remove(pattern = c("data", "science", "ds", "x", "y", "m","cv","g","r","b","d","t","s","ml")) %>%  # Remove specific words
+          dfm()
+
+DSS_Post_dfm <- tokens(DSS_Post_Corpus, 
+                 remove_punct = TRUE,
+                 remove_numbers = TRUE,
+                 remove_symbols = TRUE) %>%
+          tokens_tolower() %>% 
+          tokens_remove(pattern = stopwords("en")) %>%  # Directly remove stopwords
+          tokens_remove(pattern = c("data", "science", "ds", "x", "y", "m","cv","g","r","b","d","t","s","ml")) %>%  # Remove specific words
+          dfm()
+
+```
+
+## Wordcloud
+
+```{r}
+# Create a word cloud
+
+set.seed(197)
+
+textplot_wordcloud(DSS_dfm,
+                   min_count = 5,
+                   random_order = FALSE)
+
+set.seed(198)
+
+textplot_wordcloud(DSS_Post_dfm,
+                   min_count = 3,
+                   random_order = FALSE)
+```
+
+This subreddit, named "Data Science Students," serves as a community for individuals looking to start and advance their journey in data science. Members engage in discussions about recommended books, resources, and materials, as well as share the challenges they encounter along the way.
+
+From the word clouds of posts and comments, we observe that some of the most frequently used terms include "Python," "good," "courses," "start," "university," "analytics," "time series," "performance," "learning," "languages," and "packages." This indicates a strong emphasis on foundational programming skills, particularly in Python, and a desire for quality educational resources.
+
+Overall, these keywords reflect the community's focus on acquiring practical skills and knowledge in data science, showcasing the eagerness of its members to learn and succeed in this rapidly evolving field. The discussions highlight the collaborative spirit among students, as they seek guidance and support from one another in navigating their learning paths.
+
+## Summary Tables
+
+```{r}
+# Word Frequency Table
+
+word_freq_table_DSS_Post <- textstat_frequency(DSS_Post_dfm, n = 10) %>%
+  select(feature, frequency) %>%  # 'feature' is the word, 'frequency' is its count
+  rename(Word = feature, Freq = frequency) %>%  # Rename for clarity
+  arrange(desc(Freq))
+
+
+
+word_freq_table_DSS_Comments <- textstat_frequency(DSS_dfm, n = 10) %>%
+  select(feature, frequency) %>%  # 'feature' is the word, 'frequency' is its count
+  rename(Word = feature, Freq = frequency) %>%  # Rename for clarity
+  arrange(desc(Freq))
+
+print(word_freq_table_DSS_Comments)
+print(word_freq_table_DSS_Post)
+
+```
+
+The first frequency table highlights the most commonly used words within the "Data Science Students" subreddit, reflecting the primary interests and concerns of its members. Key terms include "like" (15 occurrences), which suggests a conversational tone in discussions, while "python" (13 occurrences) underscores its significance as a foundational programming language in data science. The word "can" (11 occurrences) indicates a focus on possibilities and capabilities, further suggesting a supportive community atmosphere. Other notable words, such as "information," "statistics," and "universities," point to a strong interest in academic resources, research, and the importance of education in the field.
+
+The second frequency table complements the first by emphasizing the practical aspects of data science. Words like "time" (9 occurrences) and "series" (8 occurrences) suggest discussions around time series analysis, a crucial topic in data analytics. The repetition of "can" (9 occurrences) again highlights the community's proactive approach to learning. The presence of "python" (7 occurrences) reinforces its central role, while "university" (6 occurrences) indicates a connection to academic environments. Overall, both tables illustrate a vibrant community engaged in discussions about learning resources, methodologies, and collaborative problem-solving in the realm of data science.
+
+So far, we've explored the comments within our corpus of Reddit posts, identifying some common themes. Overall, the discussions appear positive, with people expressing curiosity, a strong desire for knowledge, and enthusiasm for advancing in data science.
+
+Additionally, the **title** and **text** fields of each post hold meaningful insights, providing context and nuance that would enrich our analysis of sentiment, semantics, and underlying themes. Analyzing these fields in conjunction with comments will help us better understand the intent, tone, and focus of each post.
+
+Next, we'll conduct a combined sentiment analysis of the **title**, **text**, and **comments** columns from each post in our Reddit data. To do this, we'll first concatenate these columns into a single text field for each post. Once combined, we can perform dictionary-based sentiment analysis on the resulting corpus. This approach will enable us to capture a more comprehensive view of sentiment and thematic context across the entire dataset.
+
+## Combining Documents
+
+```{r}
+
+# Combining title, text, and comments for each post
+# We will concatenate each row from the title, text, and comments
+
+LDS_combined <- mapply(
+  function(title, text, comments) paste(title, text, comments, sep = " "),
+  LDS_Title, LDS_Text_Post, Learn_DS_Text,
+  SIMPLIFY = TRUE
+)
+
+# Collapsing all posts into a single string for the full corpus
+
+LDS_all <- paste(LDS_combined, collapse = " ")
+
+# Creating a corpus from the single concatenated text
+
+LDS_corpus <- corpus(LDS_all)
+
+# Now we will repeat the same procedure for the rest of the sub-reddits
+
+# Combining title, text, and comments for each post
+
+DS_combined <- mapply(
+  function(title, text, comments) paste(title, text, comments, sep = " "),
+  DS_Title, DS_Text_Post, DS_Text,
+  SIMPLIFY = TRUE
+)
+
+LML_combined <- mapply(
+  function(title, text, comments) paste(title, text, comments, sep = " "),
+  LML_Title, LML_Text_Post, LML_Text,
+  SIMPLIFY = TRUE
+)
+
+DSS_combined <- mapply(
+  function(title, text, comments) paste(title, text, comments, sep = " "),
+  DSS_Title, DSS_Text_Post, DSS_Text,
+  SIMPLIFY = TRUE
+)
+
+# Collapsing all posts into a single string for the full corpus
+
+DS_all <- paste(DS_combined, collapse = " ")
+DSS_all <- paste(DSS_combined, collapse = " ")
+LML_all <- paste(LML_combined, collapse = " ")
+
+# Creating a corpus from the single concatenated text
+
+DS_corpus <- corpus(DS_all)
+DSS_corpus <- corpus(DSS_all)
+LML_corpus <- corpus(LML_all)
+
+```
+
+```{r}
+
+# Renaming documents in each corpus to ensure uniqueness
+
+docnames(LDS_corpus) <- paste0("LDS_", seq_len(ndoc(LDS_corpus)))
+docnames(DS_corpus) <- paste0("DS_", seq_len(ndoc(DS_corpus)))
+docnames(DSS_corpus) <- paste0("DSS_", seq_len(ndoc(DSS_corpus)))
+docnames(LML_corpus) <- paste0("LML_", seq_len(ndoc(LML_corpus)))
+
+# Combining all the corpora into a single corpus
+
+all_corpora <- c(LDS_corpus, DS_corpus, DSS_corpus, LML_corpus)
+
+# Checking the document names in the combined corpus
+
+print(docnames(all_corpora))
+
+all_corpora <- corpus(all_corpora)
+
+```
+
+With all the subreddits combined into a single corpus, we can now delve deeper into sentiment analysis. Based on initial observations, these subreddits appear to have an upbeat tone, where users are enthusiastic about learning and sharing knowledge in data science. Conducting sentiment analysis will help us validate this perception. To start, we'll apply dictionary-based sentiment analysis as our first approach.
+
+## Sentiment Analysis
+
+```{r}
+
+# We'll use a package that's available on GitHub. To install it, we will load the `devtools` package. The package itself contains a host of different dictionaries publicly available dictionaries.
+
+library(devtools)
+devtools::install_github("kbenoit/quanteda.dictionaries")
+library(quanteda.dictionaries)
+
+remotes::install_github("quanteda/quanteda.sentiment")
+library(quanteda.sentiment)
+
+```
+
+In a dictionary-based analysis, the fundamental approach is to identify words associated with specific concepts and then count their frequencies within a document. For our research question, which aims to understand students' sentiments and experiences in learning data science, we need a sentiment dictionary that captures both general sentiments (positive, negative, neutral) and also addresses more nuanced emotions and themes relevant to education, learning challenges, and enthusiasm for data science.
+
+We will start with the **NRC Lexicon**, which provides a broad range of emotions, making it suitable for detecting a variety of sentiments. Following this, we will incorporate the **AFINN Lexicon** to capture a simplified positive/negative polarity. Finally, we'll apply some custom dictionaries to capture domain-specific language related to data science, learning experiences, and challenges. This multi-layered approach will help us gather deeper insights into the sentiments and themes that shape students' journeys in data science.
+
+### NRC Lexicon
+
+The NRC Emotion Lexicon is a robust dictionary that categorizes words not only by sentiment (positive/negative) but also by eight specific emotions: joy, trust, fear, surprise, sadness, anger, anticipation, and disgust. It's particularly valuable for detecting complex emotional responses, which may reveal students' enthusiasm, frustration, or anxiety about data science topics.
+
+```{r}
+# Using liwcalike() to estimate sentiment using NRC dictionary
+
+reviewSentiment_nrc <- liwcalike(all_corpora, data_dictionary_NRC)
+
+names(reviewSentiment_nrc)
+
+class(reviewSentiment_nrc)
+
+head(reviewSentiment_nrc)
+```
+
+Based on our NRC Lexicon analysis, the sentiment in the corpus is strongly positive, with an average positive score around 5 and a comparatively lower negative score near 1.2. This high positivity aligns with our initial observation that the general sentiment around learning data science is optimistic and upbeat.
+
+Looking into the specific emotional categories: - **Joy, Trust, and Anticipation** are notably high. These emotions are often associated with a fulfilling and engaging learning experience, where people find enjoyment in the process and feel confident about the support within the community. High levels of anticipation suggest that learners are optimistic about the prospects of a career in data science or advancements in their educational journey. - The subreddit **Learn Data Science** stands out with the highest positive scores. This finding reinforces the idea that this community is especially vibrant and supportive, likely providing a welcoming environment for beginners and enthusiasts to share resources and insights.
+
+On the other hand, **negative emotions** such as **anger, disgust, fear, and sadness** are relatively low compared to positive scores, underscoring that challenges and frustrations are present but are significantly outweighed by positive experiences. This overall sentiment distribution points to an environment where members are not only motivated but also supportive, creating a learning ecosystem that fuels enthusiasm rather than discouragement.
+
+This analysis confirms that the data science community, particularly on Reddit, is fostering an environment where knowledge-sharing and mutual encouragement are prominent themes. The higher levels of joy, trust, and anticipation suggest that learners view data science not just as a field of study but as an exciting and promising avenue for personal and professional growth.
+
+Next, let's convert our corpus into a Document-Feature Matrix (DFM) to prepare it for analysis, and then apply a dictionary lookup to extract sentiment and thematic insights based on predefined categories.
+
+```{r}
+# Converting corpus to dfm using the dictionary
+
+all_corpora_Dfm_nrc <- tokens(all_corpora,
+                         remove_punct = TRUE,
+                         remove_symbols = TRUE,
+                         remove_numbers = TRUE,
+                         remove_url = TRUE,
+                         split_hyphens = FALSE,
+                         include_docvars = TRUE) %>%
+  tokens_tolower() %>%
+  dfm() %>%
+  dfm_lookup(data_dictionary_NRC)
+
+```
+
+```{r}
+dim(all_corpora_Dfm_nrc)
+head(all_corpora_Dfm_nrc)
+class(all_corpora_Dfm_nrc)
+```
+
+Note that these results are now represented as *counts* rather than percentages, as we saw previously with `liwcalike()`. In each of the four subreddits, the word counts for positive sentiments---words associated with positivity, trust, joy, and anticipation---significantly outnumber those related to negative sentiments, such as sadness, negativity, fear, and anger. Now, let's proceed to analyze the data with the next dictionary.
+
+### AFINN Dictionary
+
+AFINN is a simpler dictionary that assigns scores to words based on sentiment intensity, with scores ranging from -5 (most negative) to +5 (most positive). It's effective for capturing general sentiment and intensity, which could help quantify the overall sentiment in discussions.This dictionary could be a helpful companion to the NRC Lexicon for gaining a straightforward measure of sentiment strength and overall tone in our corpus.
+
+```{r}
+# Loading the AFINN Sentiment Lexicon
+
+afinn_dict <- tidytext::get_sentiments("afinn")
+
+# Converting AFINN to a Quanteda Dictionary
+
+afinn_quanteda_dict <- quanteda::dictionary(
+  list(positive = afinn_dict$word[afinn_dict$value > 0],
+       negative = afinn_dict$word[afinn_dict$value < 0]))
+
+# Using liwcalike() to estimate sentiment using AFINN dictionary
+
+reviewSentiment_afinn <- liwcalike(all_corpora, afinn_quanteda_dict)
+
+names(reviewSentiment_afinn)
+
+class(reviewSentiment_afinn)
+
+head(reviewSentiment_afinn)
+```
+
+From the AFINN dictionary analysis, we observe that all four documents exhibit high positive sentiment scores, which align with our previous findings. Negative sentiments remain relatively subdued, averaging around a score of 1, indicating minimal negative emotional tone. Notably, the "Learn Data Science" community stands out with the highest positive valence score. Next, we will refine our analysis by repeating the sentiment evaluation, this time using tokens that have been cleaned of numbers, punctuation, and symbols for a clearer understanding of the emotional content.
+
+```{r}
+# Converting corpus to dfm using the dictionary
+
+all_corpora_Dfm_afinn <- tokens(all_corpora,
+                         remove_punct = TRUE,
+                         remove_symbols = TRUE,
+                         remove_numbers = TRUE,
+                         remove_url = TRUE,
+                         split_hyphens = FALSE,
+                         include_docvars = TRUE) %>%
+  tokens_tolower() %>%
+  dfm() %>%
+  dfm_lookup(afinn_quanteda_dict)
+
+
+```
+
+```{r}
+dim(all_corpora_Dfm_afinn)
+head(all_corpora_Dfm_afinn)
+class(all_corpora_Dfm_afinn)
+```
+
+We observe from the word counts in the Document-Feature Matrix (DFM) that all documents in our corpus contain more positive words than negative ones by a significant margin. This observation supports our initial theory that positive sentiments are more prevalent than negative sentiments in these discussions. Up to this point, we have relied on pre-built dictionaries to analyze the sentiment within our data. Now, we plan to create a custom dictionary tailored to our specific research context, which will enable us to detect particular themes relevant to data science.
+
+### Custom Dictionary
+
+For our analysis, a custom dictionary containing keywords pertinent to the field of data science---such as "overfitting," "model accuracy," or "data wrangling"---can be valuable for identifying data science-specific topics. Our custom dictionary will focus on highlighting themes frequently encountered in student discussions about learning and working in data science, such as "challenge," "confidence," and "imposter syndrome." This approach will allow us to better capture both technical and emotional aspects of students' experiences.
+
+Here's a proposed design for our custom dictionary, structured to align with our research goals:
+
+1.  **Technical Challenges**
+    -   **Keywords:** "overfitting," "underfitting," "feature engineering," "data wrangling," "dimensionality," "scaling," "hyperparameters," "cross-validation," "overwhelming," "complexity"
+    -   **Context:** These terms highlight frustrations or challenges with technical concepts and methods, capturing the difficulties students face while learning or applying data science techniques.
+2.  **Progress and Learning**
+    -   **Keywords:** "learning curve," "progress," "growth," "improvement," "skills," "mastery," "upskilling," "practice," "success," "confidence," "achievement"
+    -   **Context:** This category emphasizes language associated with personal development and confidence, reflecting students' sense of accomplishment as they gain proficiency in data science.
+3.  **Enthusiasm and Interest**
+    -   **Keywords:** "passionate," "curious," "interested," "excited," "fascinating," "inspiring," "engaging," "satisfying," "rewarding," "enjoyable"
+    -   **Context:** Words in this category represent positive sentiments like curiosity and excitement, commonly expressed by students eager to engage in data science.
+4.  **Imposter Syndrome and Self-Doubt**
+    -   **Keywords:** "imposter syndrome," "intimidated," "self-doubt," "struggle," "lost," "unsure," "challenging," "lack of confidence," "not good enough," "stuck"
+    -   **Context:** Captures the frequent feeling of self-doubt and intimidation experienced by students, especially when dealing with complex and demanding topics.
+5.  **Community and Collaboration**
+    -   **Keywords:** "networking," "collaborate," "community," "support," "peer support," "mentorship," "guidance," "feedback," "study group"
+    -   **Context:** Reflects the importance of community and collaboration, highlighting discussions around peer support, mentorship, and shared learning experiences.
+6.  **Career and Job Prospects**
+    -   **Keywords:** "job market," "career," "opportunities," "employment," "internships," "networking," "skills demand," "industry," "hiring"
+    -   **Context:** This category addresses students' concerns about job opportunities and career prospects, which can significantly influence their motivation and approach to learning data science.
+7.  **Learning Resources and Tools**
+    -   **Keywords:** "tutorial," "MOOC," "Kaggle," "Coursera," "Udacity," "GitHub," "Python," "RStudio," "TensorFlow," "documentation"
+    -   **Context:** Focuses on common resources and tools mentioned by students, providing insights into how they engage with learning platforms and materials.
+
+This custom dictionary will enable us to perform a more nuanced analysis of student experiences, capturing both domain-specific terminology and emotional language reflective of their journey in data science.
+
+```{r}
+
+# Designing our custom dictionary
+
+custom_dictionary <- dictionary(list(
+  "Technical Challenges" = c("overfitting", "underfitting", "feature engineering", "data wrangling", "dimensionality", "scaling", "hyperparameters", "cross-validation", "overwhelming", "complexity"),
+  "Progress and Learning" = c("learning curve", "progress", "growth", "improvement", "skills", "mastery", "upskilling", "practice", "success", "confidence", "achievement"),
+  "Enthusiasm and Interest" = c("passionate", "curious", "interested", "excited", "fascinating", "inspiring", "engaging", "satisfying", "rewarding", "enjoyable"),
+  "Imposter Syndrome and Self-Doubt" = c("imposter syndrome", "intimidated", "self-doubt", "struggle", "lost", "unsure", "challenging", "lack of confidence", "not good enough", "stuck"),
+  "Community and Collaboration" = c("networking", "collaborate", "community", "support", "peer support", "mentorship", "guidance", "feedback", "study group"),
+  "Career and Job Prospects" = c("job market", "career", "opportunities", "employment", "internships", "networking", "skills demand", "industry", "hiring"),
+  "Learning Resources and Tools" = c("tutorial", "MOOC", "Kaggle", "Coursera", "Udacity", "GitHub", "Python", "RStudio", "TensorFlow", "documentation")
+))
+
+```
+
+```{r}
+# Converting corpus to dfm using the custom dictionary
+
+all_corpora_Dfm_custom <- tokens(all_corpora,
+                         remove_punct = TRUE,
+                         remove_symbols = TRUE,
+                         remove_numbers = TRUE,
+                         remove_url = TRUE,
+                         split_hyphens = FALSE,
+                         include_docvars = TRUE) %>%
+  tokens_tolower() %>%
+  dfm() %>%
+  dfm_lookup(custom_dictionary)
+
+```
+
+```{r}
+dim(all_corpora_Dfm_custom)
+head(all_corpora_Dfm_custom)
+class(all_corpora_Dfm_custom)
+```
+
+Analyzing our corpus using the predefined concept categories from our custom dictionary reveals a rich variety of emotions and themes. Notably, the categories "Progress and Learning" and "Career and Job Prospects" contain a significant number of related and frequently repeated words. This suggests that a considerable portion of discussions within our corpus revolves around a sense of enthusiasm and a strong focus on personal and professional growth. Students and professionals alike appear to be highly motivated and eager to advance their skills and careers, indicating a shared drive to excel in the data science field.
+
+Additionally, we observe a high frequency of words within the "Learning Resources and Tools" and "Community and Collaboration" categories. This finding highlights the importance placed on practical resources and the value of collective learning and support networks. The emphasis on tools, platforms, and community engagement suggests that individuals in this domain heavily rely on shared resources and peer connections to navigate the complexities of data science. This points to a collaborative culture where mentorship, study groups, and educational resources are critical for success.
+
+On the other hand, the category "Imposter Syndrome and Self-Doubt" shows a comparatively lower frequency of associated words. While this does not imply that feelings of self-doubt are absent, it may indicate that discussions around these struggles are less openly shared or that students are more focused on the positive aspects of their learning journey. This could suggest a resilient or forward-looking attitude among students, emphasizing optimism and a proactive approach to challenges. Alternatively, it might reflect a tendency to underreport personal insecurities in public or professional forums.
+
+Overall, the prevalence of themes related to growth, resources, and collaboration, combined with a lower emphasis on self-doubt, paints a picture of a motivated and community-driven data science learning environment. This insight provides valuable context for understanding the dynamics of how individuals navigate the field and where they draw their support and motivation.
+
+### Visualizing Polarity
+
+Now we have derive sentiment anbalysis results for these two different dictionaries. We can create a polarity score by mutating these dataframes and visualize them. Lets start with the NRC dictionary.
+
+```{r}
+# Feature Engineering NRC sentiment results
+
+reviewSentiment_nrc <- reviewSentiment_nrc %>% 
+  mutate(Polarity = (positive - negative) / (positive + negative + 1))
+
+```
+
+```{r}
+# Plotting polarity vs document
+
+ggplot(reviewSentiment_nrc, aes(x = docname, y = Polarity)) +
+  geom_col(fill = "steelblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Polarity Score by Document (NRC)",
+       x = "Document Name",
+       y = "Polarity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+The analysis reveals that the *Learn Data Science* community has the highest polarity scores compared to other Reddit communities. Next, we will proceed to calculate polarity scores using the AFINN dictionary results.
+
+```{r}
+# Feature Engineering AFINN sentiment results
+
+reviewSentiment_afinn <- reviewSentiment_afinn %>% 
+  mutate(Polarity = (positive - negative) / (positive + negative + 1))
+
+```
+
+```{r}
+# Plotting polarity vs document
+
+ggplot(reviewSentiment_afinn, aes(x = docname, y = Polarity)) +
+  geom_col(fill = "steelblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Polarity Score by Document (AFINN)",
+       x = "Document Name",
+       y = "Polarity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Using the AFINN dictionary for sentiment analysis, we observe that the subreddit *Learn Data Science* exhibits the highest polarity scores, followed by *Data Science Students* and *Learn Machine Learning*. This trend aligns with the results from previous sentiment analysis using a different dictionary. A comparison of polarity scores across the two analyses reveals a consistent pattern: *Learn Data Science* maintains the highest positive sentiment, followed by a similar ranking of the other subreddits. This consistency highlights the strong positive sentiment associated with *Learn Data Science* discussions.
+
+## Topic Modeling
+
+Thus far, our sentiment analysis has provided insights into the various emotions expressed within the corpus. Both sentiment dictionaries consistently indicated a predominance of positive sentiments across the subreddits, following an observable pattern. To deepen our analysis, we created a custom dictionary to explore the emotional nuances expressed in the subreddits in greater detail. Notably, the polarity score distribution across the subreddits remained largely positive and showed similar trends.
+
+As the next step, we will implement unsupervised topic modeling techniques to uncover the themes present within the documents. This approach will help us determine if the identified topics align with those observed in our custom dictionary.
+
+To achieve this, we will analyze the individual corpora from each subreddit to identify underlying themes and meanings. However, topic modeling requires unique documents in each corpus. Currently, our corpora consist of combined text fields, which may limit the effectiveness of our analysis. Therefore, we will restructure our corpora so that each document represents a unique post, including its title and comments in a single field. This restructuring will enhance the quality of our topic models and provide more meaningful insights.
+
+### Transforming Corpuses
+
+```{r, echo=TRUE, results='hide'}
+# LDS Corpus
+
+# Group comments by URL
+
+#LDS_grouped_comments <- LDS_Comments %>% 
+  #group_by(url) %>% 
+  #summarise(
+    #combined_comments = paste(comment, collapse = " "),
+    #score = sum(score),
+    #.groups = 'drop'
+  #)
+
+
+# Merge comments with posts
+
+# LDS_merged_data <- Learn_DS_urls %>%
+  #left_join(LDS_grouped_comments, by = "url")
+
+# Combine post, text, and comments
+
+# LDS_merged_data <- LDS_merged_data %>%
+  #mutate(
+    #combined_text = paste(title, text, combined_comments, sep = " ")
+  #)
+
+# Normalize the score column using Min-Max Scaling
+
+# LDS_merged_data$score <- (LDS_merged_data$score - min(LDS_merged_data$score)) / 
+                                #(max(LDS_merged_data$score) - min(LDS_merged_data$score))
+
+# View the updated DataFrame
+# head(text_corpus)
+
+# Save the LDS_merged_data dataframe as an RDS file
+
+# saveRDS(LDS_merged_data, file = "LDS_merged_data.rds")
+
+# Load the LDS_merged_data dataframe from the saved RDS file
+
+LDS_merged_data <- readRDS("LDS_merged_data.rds")
+
+
+# Create a corpus
+
+LDS_reddit_corpus <- corpus(LDS_merged_data, text_field = "combined_text")
+
+
+# DS Corpus
+
+# Group comments by URL
+
+#DS_grouped_comments <- DS_Comments %>% 
+ # group_by(url) %>% 
+  #summarise(
+   # combined_comments = paste(comment, collapse = " "),
+    #score = sum(score),
+    #.groups = 'drop'
+  #)
+
+
+# Merge comments with posts
+
+#DS_merged_data <- DS_urls %>%
+ # left_join(DS_grouped_comments, by = "url")
+
+# Combine post, text, and comments
+
+#DS_merged_data <- DS_merged_data %>%
+ # mutate(
+  #  combined_text = paste(title, text, combined_comments, sep = " ")
+  #)
+
+# Normalize the score column using Min-Max Scaling
+
+#DS_merged_data$score <- (DS_merged_data$score - min(DS_merged_data$score, na.rm = T)) / 
+ #                               (max(DS_merged_data$score, na.rm = T) - min(DS_merged_data$score, na.rm = T))
+
+# Calculate the mean of the score column, ignoring NA values
+
+#ms_1 <- mean(DS_merged_data$score, na.rm = TRUE)
+
+# Replace NA values with the mean score
+
+#DS_merged_data <- DS_merged_data %>%
+  #mutate(score = ifelse(is.na(score), ms_1, score))
+
+# Save the DS_merged_data dataframe as an RDS file
+
+# saveRDS(DS_merged_data, file = "DS_merged_data.rds")
+
+# Load the DS_merged_data dataframe from the saved RDS file
+
+DS_merged_data <- readRDS("DS_merged_data.rds")
+
+# Create a corpus
+
+DS_reddit_corpus <- corpus(DS_merged_data, text_field = "combined_text")
+
+
+# LML Corpus
+
+# Group comments by URL
+
+#LML_grouped_comments <- LML_Comments %>% 
+ # group_by(url) %>% 
+  #summarise(
+   # combined_comments = paste(comment, collapse = " "),
+    #score = sum(score),
+    #.groups = 'drop'
+  #)
+
+
+# Merge comments with posts
+
+#LML_merged_data <- LML_urls %>%
+ # left_join(LML_grouped_comments, by = "url")
+
+# Combine post, text, and comments
+
+#LML_merged_data <- LML_merged_data %>%
+ # mutate(
+  #  combined_text = paste(title, text, combined_comments, sep = " ")
+  #)
+
+# Normalize the score column using Min-Max Scaling
+
+#LML_merged_data$score <- (LML_merged_data$score - min(LML_merged_data$score, na.rm = T)) / 
+#                                (max(LML_merged_data$score, na.rm = T) - min(LML_merged_data$score, na.rm = T))
+
+# Save the LML_merged_data dataframe as an RDS file
+
+# saveRDS(LML_merged_data, file = "LML_merged_data.rds")
+
+# Load the LML_merged_data dataframe from the saved RDS file
+
+LML_merged_data <- readRDS("LML_merged_data.rds")
+
+
+# Create a corpus
+
+LML_reddit_corpus <- corpus(LML_merged_data, text_field = "combined_text")
+
+
+# DSS Corpus
+
+# Group comments by URL
+
+#DSS_grouped_comments <- DSS_Comments %>% 
+ # group_by(url) %>% 
+  #summarise(
+   # combined_comments = paste(comment, collapse = " "),
+    #score = sum(score),
+    #.groups = 'drop'
+  #)
+
+
+# Merge comments with posts
+
+#DSS_merged_data <- DSS_urls %>%
+ # left_join(DSS_grouped_comments, by = "url")
+
+# Combine post, text, and comments
+
+#DSS_merged_data <- DSS_merged_data %>%
+ # mutate(
+  #  combined_text = paste(title, text, combined_comments, sep = " ")
+  #)
+
+# Normalize the score column using Min-Max Scaling
+
+#DSS_merged_data$score <- (DSS_merged_data$score - min(DSS_merged_data$score, na.rm = T)) / 
+ #                               (max(DSS_merged_data$score, na.rm = T) - min(DSS_merged_data$score, na.rm = T))
+
+# Calculate the mean of the score column, ignoring NA values
+
+#ms_2 <- mean(DSS_merged_data$score, na.rm = TRUE)
+
+# Replace NA values with the mean score
+
+#DSS_merged_data <- DSS_merged_data %>%
+ # mutate(score = ifelse(is.na(score), ms_2, score))
+
+# Save the DSS_merged_data dataframe as an RDS file
+
+# saveRDS(DSS_merged_data, file = "DSS_merged_data.rds")
+
+# Load the DSS_merged_data dataframe from the saved RDS file
+
+DSS_merged_data <- readRDS("DSS_merged_data.rds")
+
+# Create a corpus
+
+DSS_reddit_corpus <- corpus(DSS_merged_data, text_field = "combined_text")
+
+```
+
+Now that we have restructured our corpora, we can proceed with topic modeling. For the Structural Topic Modeling (STM) analysis, we will utilize the `score` variable from the final merged DataFrame as a covariate. To ensure consistency and mitigate the impact of outliers, we normalized the `score` variable using Min-Max scaling, as some scores had significantly higher values compared to others. 
+
+With the preprocessing complete, let's dive into the LDA modeling and interpret its outputs to uncover meaningful insights.
+
+
+### Latent Dirichlet Allocation (LDA)
+
+For this analysis, we employ **Latent Dirichlet Allocation (LDA)**, a powerful unsupervised machine learning algorithm, to conduct topic modeling on individual corpora from four data science subreddits. Each subreddit represents a unique community with its own focus and patterns of discussion. By analyzing the text data separately for each subreddit, we aim to uncover subreddit-specific themes and insights that capture the unique perspectives and concerns of their respective user bases.
+
+LDA operates by assuming that each document (e.g., post or comment) is a mixture of hidden topics, with each topic being a distribution of words. The algorithm iteratively assigns words to topics based on their co-occurrence patterns within the text, gradually refining the relationships between words and topics. This probabilistic approach enables the discovery of thematic structures without any prior labeling of the data. To prepare for the LDA modeling, we preprocess the text by tokenizing, removing stopwords, stemming, and generating n-grams. Analyzing each subreddit individually ensures that the extracted topics are highly relevant to the specific discussions within each community, providing a nuanced understanding of the shared interests and dominant themes across the data science field.
+
+```{r}
+# Learn Data Science sub reddit LDA Modeling
+
+LDS_tokens <- tolower(LDS_reddit_corpus)
+
+LDS_tokens <- word_tokenizer(LDS_tokens)
+
+```
+
+Now we can create an iterator over each token using `itoken()`. An iterator is an object that can be iterated upon, meaning that you can traverse through all the values. In our example, we'll be able to traverse through each token for each row using our newly generated iterator, `it`. The general thing to note here is that this is a way to make the approach less memory intensive, something that will turn out to be helpful.
+
+```{r,echo=TRUE,results='hide'}
+
+# iterates over each token
+
+it_1 <- itoken(LDS_tokens, progressbar = FALSE)
+
+# prints iterator
+it_1
+
+```
+
+```{r,echo=TRUE,results='hide'}
+# Creating Vocabulary for DFM
+
+v_1 <- create_vocabulary(it_1)
+
+# print vocabulary
+
+v_1
+```
+
+```{r}
+# checking dimensions
+
+dim(v_1)
+```
+
+Now we will prune our vocabulary. We will remove very common words so that our vocabulary can contain more high quality and meaningful words.
+
+```{r}
+# prunes vocabulary
+
+#v_1 <- prune_vocabulary(v_1, term_count_min = 10, doc_proportion_max = 0.2)
+
+# check dimensions
+
+dim(v_1)
+
+```
+
+```{r}
+# creating a closure that helps transform list of tokens into vector space
+
+vectorizer <- vocab_vectorizer(v_1)
+```
+
+We now have everything we need to create a DFM. We can pass in our iterator of tokens, our vectorized vocabulary, and a type of matrix (either `dgCMatrix` or `dgTMatrix`) in `create_dtm()`.
+
+```{r}
+# creates document term matrix
+
+LDS_dtm <- create_dtm(it_1, vectorizer, type = "dgTMatrix")
+
+dim(LDS_dtm)
+
+
+```
+
+Now we are ready to use our Document-Term Matrix (DTM) to build an LDA model. However, before training the model, we need to initialize it with a set of hyperparameters. These include the number of topics, the document-to-topic distribution prior, and the topic-to-word distribution prior, all of which are numerical parameters. Given that our data consists of Reddit comments and posts, which are typically concise and brief, I have some assumptions about how these parameters should be tuned.
+
+To ensure a robust approach, we will implement a grid search to systematically test various combinations of these parameters and select the best-fitting model. The evaluation will be based on perplexity, a metric that measures how well the model predicts a sample of unseen data. Lower perplexity values indicate a better fit, as they reflect a more coherent topic distribution in relation to the given corpus. This approach ensures an optimal balance between model complexity and performance.
+
+```{r, echo=TRUE, results='hide'}
+# Define the parameter grid
+param_grid <- expand.grid(
+  n_topics = c(5, 10, 15),         # Number of topics
+  doc_topic_prior = c(0.1, 0.5, 1.0),  # Document-topic prior
+  topic_word_prior = c(0.01, 0.1, 0.5) # Topic-word prior
+)
+
+# Initialize an empty data frame to store results
+results_LDA_LDS <- data.frame(
+  n_topics = integer(),
+  doc_topic_prior = numeric(),
+  topic_word_prior = numeric(),
+  perplexity = numeric()
+)
+
+# Function to calculate perplexity manually
+calculate_perplexity <- function(dtm, doc_topic_distr, topic_word_distr) {
+  log_likelihood <- 0
+  total_words <- 0
+  
+  # Convert DTM to dense matrix for iteration
+  dtm_matrix <- as.matrix(dtm)
+  
+  for (doc_idx in seq_len(nrow(dtm_matrix))) {
+    doc <- dtm_matrix[doc_idx, ]
+    word_indices <- which(doc > 0)  # Words present in the document
+    
+    for (word_idx in word_indices) {
+      word_count <- doc[word_idx]
+      prob_word_given_doc <- sum(doc_topic_distr[doc_idx, ] * topic_word_distr[, word_idx])
+      log_likelihood <- log_likelihood + word_count * log(prob_word_given_doc)
+      total_words <- total_words + word_count
+    }
+  }
+  
+  perplexity <- exp(-log_likelihood / total_words)
+  return(perplexity)
+}
+
+# Perform grid search
+for (i in seq_len(nrow(param_grid))) {
+  # Extract the current parameter combination
+  params <- param_grid[i, ]
+  
+  # Fit the LDA model
+  lda_model <- LDA$new(
+    n_topics = params$n_topics,
+    doc_topic_prior = params$doc_topic_prior,
+    topic_word_prior = params$topic_word_prior
+  )
+  
+  # Print progress
+  cat("Running with parameters: n_topics =", params$n_topics,
+      ", doc_topic_prior =", params$doc_topic_prior,
+      ", topic_word_prior =", params$topic_word_prior, "\n")
+  
+  # Fit the model and retrieve distributions
+  doc_topic_distr <- lda_model$fit_transform(LDS_dtm)  # Document-topic distribution
+  topic_word_distr <- lda_model$topic_word_distribution  # Topic-word distribution
+  
+  # Calculate perplexity manually
+  perplexity_score <- calculate_perplexity(LDS_dtm, doc_topic_distr, topic_word_distr)
+  
+  # Store results
+  results_LDA_LDS <- rbind(
+    results_LDA_LDS,
+    cbind(params, perplexity = perplexity_score)
+  )
+}
+
+# Selecting the best model based on perplexity
+
+best_model <- results_LDA_LDS[which.min(results_LDA_LDS$perplexity), ]
+
+# Print results
+
+print(results_LDA_LDS)
+cat("Best model parameters: n_topics =", best_model$n_topics,
+    ", doc_topic_prior =", best_model$doc_topic_prior,
+    ", topic_word_prior =", best_model$topic_word_prior, "\n")
+
+
+```
+
+We will now train a new LDA model using the best set of hyperparameters determined from the grid search. These hyperparameters, identified as the most suitable for topic modeling on the LDS dataset, are:
+
+-   **Number of Topics (n_topics):** 15\
+-   **Document-Topic Prior (doc_topic_prior):** 1\
+-   **Topic-Word Prior (topic_word_prior):** 0.1
+
+This model will be used to perform topic modeling on the LDS dataset.
+
+```{r,echo=TRUE,results='hide'}
+
+LDS_mod <- LDA$new(n_topics = 15, doc_topic_prior = 1, topic_word_prior = 0.1)
+
+LDS_mod$fit_transform(LDS_dtm)
+
+```
+```{r}
+LDS_mod$get_top_words(n = 10, topic_number = c(1L, 3L, 5L),
+                        lambda = 0.2)
+```
+
+The LDA model for the "Learn Data Science" subreddit highlights themes ranging from beginner support to advanced technical discussions. Key topics include troubleshooting and course recommendations, deep learning and training models, practical applications such as feature engineering and career preparation, and shared learning tools like Khan Academy. Beginner-focused themes emphasize resources and guidance for starting data science projects, while other topics delve into programming and functional coding aspects. Some terms, like *fcjxephb*, may indicate noise or irrelevant content, but overall, the topics reflect a community-driven mix of learning, practical implementation, and collaborative support.
+
+Next, we will perform LDA modeling on another subreddit, *Learn Machine Learning*, to explore its thematic structure. This analysis will serve as a test before proceeding to Structural Topic Modeling (STM) and Correlated Topic Modeling (CTM).
+
+```{r, echo=TRUE, results='hide'}
+# LML LDA Modeling
+
+LML_tokens <- tolower(LML_reddit_corpus)
+
+LML_tokens <- word_tokenizer(LML_tokens)
+
+# iterates over each token
+
+it_2 <- itoken(LML_tokens, progressbar = FALSE)
+
+# prints iterator
+it_2
+
+# Creating Vocabulary for DFM
+
+v_2 <- create_vocabulary(it_2)
+
+# print vocabulary
+
+v_2
+
+# checking dimensions
+
+dim(v_2)
+
+# prunes vocabulary
+
+# v_2 <- prune_vocabulary(v_2, term_count_min = 10, doc_proportion_max = 0.2)
+
+# check dimensions
+
+dim(v_2)
+
+# creating a closure that helps transform list of tokens into vector space
+
+vectorizer_2 <- vocab_vectorizer(v_2)
+
+# creates document term matrix
+
+LML_dtm <- create_dtm(it_2, vectorizer_2, type = "dgTMatrix")
+
+```
+
+
+We will prune our vocabulary. We will remove very common words so that our vocabulary can contain more high quality and meaningful words. We  have everything we need to create a DFM. We can pass in our iterator of tokens, our vectorized vocabulary, and a type of matrix (either `dgCMatrix` or `dgTMatrix`) in `create_dtm()`. We will create a LDA model with the same hyper-parameters we used previously.
+
+```{r, echo=TRUE, results='hide'}
+
+LML_mod <- LDA$new(n_topics = 15, doc_topic_prior = 1, topic_word_prior = 0.1)
+
+LML_mod$fit_transform(LML_dtm)
+
+```
+```{r}
+LML_mod$get_top_words(n = 10, topic_number = c(1L, 3L, 5L),
+                        lambda = 0.2)
+```
+
+The LDA modeling results for the *Learn Machine Learning* subreddit reveal key thematic areas within the community's discussions. Prominent topics include roles and career paths such as data scientist and analyst roles, competitive career landscapes, and aspirations to land positions at companies like FAANG. Technical themes encompass discussions about deep learning (DL), model definitions, subsets, and deeper explorations into concepts like artificial general intelligence (AGI). Additionally, practical challenges such as tackling questions on platforms like LeetCode, dealing with failure, and the learning journey are evident.
+
+The performance of LDA in this context has provided a valuable overview of recurring themes. However, LDA has its limitations, as it assumes independence among topics and lacks the ability to model complex topic relationships or account for covariates like user engagement or upvote scores. These constraints make it less suited for capturing nuanced thematic structures and dependencies within the data. Therefore, moving forward, we will utilize Structural Topic Modeling (STM) and Correlated Topic Modeling (CTM) to gain deeper insights. These approaches will allow us to incorporate metadata and explore correlations among topics, offering a more comprehensive analysis of the subreddit discussions.
+
+
+### Correlated Structural Topic Modeling (STM)
+
+```{r}
+# Loading required packages
+
+library(stm)
+library(quanteda)
+
+```
+
+We will begin by using Correlated Topic Modeling (CTM) to identify distinct topics present across the four corpora from the different Reddit communities. CTM assigns all documents to a predefined number of topics, allowing us to uncover the thematic structure within each corpus. For this analysis, we will define 5 topics per corpus. Let's proceed and interpret the results.
+
+
+```{r}
+# Learn Data Science STM
+
+# Creating a Document Feature Matrix
+
+LDS_tokens_STM <- tokens(LDS_reddit_corpus,
+                   remove_punct = TRUE) %>%
+             tokens_remove(stopwords("en"))
+
+LDS_Dfm_STM <- dfm(LDS_tokens_STM, tolower = TRUE)
+
+dim(LDS_Dfm_STM)
+
+```
+
+```{r}
+cor_topic_model_LDS <- stm(LDS_Dfm_STM, K = 5,
+                       verbose = FALSE, init.type = "Spectral")
+cor_topic_model_LDS
+summary(cor_topic_model_LDS)
+```
+The Correlated Topic Modeling (CTM) analysis of the **r/learndatascience** subreddit reveals five distinct topics, each highlighting unique themes and discussions among users. 
+
+**Topic 1** focuses on general guidance and starting points for learning data science, with terms like *data*, *science*, and *learning* appearing frequently. Words like *guidance*, *resources*, and *advice* suggest discussions centered on beginner tips, learning pathways, and resource sharing.  
+
+**Topic 2** emphasizes the use of Python and collaborative tools like Discord in learning data science. Key terms such as *python*, *r*, and *discord* indicate an active community exchanging programming knowledge and interacting on platforms like Discord for learning and networking.  
+
+**Topic 3** appears to capture technical problem-solving and teamwork, with terms like *team*, *error*, and *points*. FREX terms such as *square*, *jupyter*, and *negative* suggest discussions around troubleshooting, debugging, and collaboration within projects or assignments.  
+
+**Topic 4** centers around applying data science techniques, with terms like *model*, *train*, and *evaluation*. This topic highlights conversations about technical concepts like k-fold cross-validation, variable selection, and training machine learning models, reflecting intermediate-to-advanced learning content.  
+
+**Topic 5** relates to learning resources, courses, and platforms, with terms like *dataquest*, *course*, and *microsoft*. Users discuss online platforms such as Dataquest and Microsoft Excel, exploring subscription-based learning and tools for building foundational data science skills.
+
+Overall, the topics illustrate a diverse learning environment where beginners and advanced learners engage in sharing resources, solving problems, and discussing practical applications and tools in data science.
+
+```{r}
+
+# Data Science STM
+
+# Creating a Document Feature Matrix
+
+DS_tokens_STM <- tokens(DS_reddit_corpus,
+                   remove_punct = TRUE) %>%
+             tokens_remove(stopwords("en"))
+
+DS_Dfm_STM <- dfm(DS_tokens_STM, tolower = TRUE)
+
+dim(DS_Dfm_STM)
+
+```
+
+```{r}
+cor_topic_model_DS <- stm(DS_Dfm_STM, K = 5,
+                       verbose = FALSE, init.type = "Spectral")
+cor_topic_model_DS
+summary(cor_topic_model_DS)
+```
+The Correlated Topic Modeling (CTM) analysis of the **r/datascience** subreddit identifies five distinct topics, reflecting a range of themes discussed by members of the community. Here is a summary of the topics:
+
+**Topic 1** focuses on foundational concepts and statistical techniques in data science, with frequent terms like *data*, *pca*, and *p-value*. FREX terms such as *pancake*, *experiment*, and *eigenvalues* indicate discussions related to experimentation, dimensionality reduction, and statistical methods.  
+
+**Topic 2** emphasizes professional growth and compensation in the data science field. Key terms such as *job*, *company*, and *salary* highlight discussions on salaries, promotions, and career trajectories. FREX terms like *compensation* and *salaries* suggest conversations around the financial aspects of working in data science.  
+
+**Topic 3** centers around programming languages and tools commonly used in data science. Words like *python*, *r*, and *pandas* dominate, while FREX terms like *duckdb*, *data.table*, and *polars* indicate a focus on efficient data manipulation libraries and backends.  
+
+**Topic 4** captures technical problem-solving and the integration of AI tools in data workflows. Terms such as *sql*, *gpt*, and *pbi* suggest discussions about querying databases, using tools like ChatGPT and Power BI, and coding best practices. FREX terms like *chatgpt* and *coding* highlight the increasing interest in leveraging AI for efficiency.  
+
+**Topic 5** revolves around forecasting and analytical insights, with terms like *time*, *forecasting*, and *predict*. FREX terms such as *inflation*, *seasonality*, and *sarima* suggest discussions on time-series analysis, economic trends, and predictive modeling techniques.
+
+Overall, the topics reflect a balanced mix of technical, professional, and applied themes, showcasing the diverse interests of the r/datascience community, from statistical methods and programming to career development and advanced forecasting.
+
+```{r}
+
+# Learn Machine Learning STM
+
+# Creating a Document Feature Matrix
+
+LML_tokens_STM <- tokens(LML_reddit_corpus,
+                   remove_punct = TRUE) %>%
+             tokens_remove(stopwords("en"))
+
+LML_Dfm_STM <- dfm(LML_tokens_STM, tolower = TRUE)
+
+dim(LML_Dfm_STM)
+
+```
+
+```{r}
+cor_topic_model_LML <- stm(LML_Dfm_STM, K = 5,
+                       verbose = FALSE, init.type = "Spectral")
+cor_topic_model_LML
+summary(cor_topic_model_LML)
+```
+The Correlated Topic Modeling (CTM) analysis of the **r/learnmachinelearning** subreddit reveals five key topics that reflect the learning experiences, technical challenges, and career aspirations of the subreddit community.
+
+**Topic 1** explores discussions about machine learning (ML) and artificial intelligence (AI) as areas of interest and curiosity. Words like *ml*, *learning*, and *ai* appear frequently, while terms such as *icml*, *neurips*, and *son* suggest conversations around academic conferences, personal achievements, and inspiring success stories in ML.
+
+**Topic 2** highlights career-oriented discussions, focusing on self-learning and skill-building for jobs in ML. Key terms include *job*, *data*, *engineer*, and *portfolio*, indicating active engagement in topics like building resumes, pursuing advanced degrees, and crafting career pathways in ML. FREX terms such as *self*, *study*, and *masters* further underscore these themes.
+
+**Topic 3** focuses on the theoretical foundations of ML, including mathematical and statistical concepts. Terms like *math*, *statistics*, *supervised*, and *analysis* indicate interest in understanding the core algorithms and techniques behind ML. Discussions may also touch on advanced topics such as artificial general intelligence (AGI) and statistical modeling.
+
+**Topic 4** revolves around crafting resumes and preparing for job interviews in the ML field. Words like *resume*, *experience*, *interview*, and *cv* are prominent, reflecting a focus on presenting professional experience effectively. FREX terms such as *bullet*, *resumes*, and *letter* indicate detailed advice and best practices for securing ML-related roles.
+
+**Topic 5** delves into technical implementation, with an emphasis on using libraries like PyTorch and TensorFlow. Key terms like *pytorch*, *tensorflow*, *dependencies*, and *dataset* suggest that users seek guidance on installing and utilizing ML tools. FREX terms such as *install*, *conda*, and *library* highlight the practical challenges faced in configuring ML environments.
+
+Overall, the topics in **r/learnmachinelearning** illustrate a balanced mix of foundational learning, practical application, career development, and community engagement in the field of ML.
+
+```{r}
+
+# Data Science Students STM
+
+# Creating a Document Feature Matrix
+
+DSS_tokens_STM <- tokens(DSS_reddit_corpus,
+                   remove_punct = TRUE) %>%
+             tokens_remove(stopwords("en"))
+
+DSS_Dfm_STM <- dfm(DSS_tokens_STM, tolower = TRUE)
+
+dim(DSS_Dfm_STM)
+
+```
+
+```{r}
+cor_topic_model_DSS <- stm(DSS_Dfm_STM, K = 5,
+                       verbose = FALSE, init.type = "Spectral")
+cor_topic_model_DSS
+summary(cor_topic_model_DSS)
+```
+The Correlated Topic Modeling (CTM) analysis of the **r/datasciencestudents** subreddit reveals five distinct topics that provide insights into the interests, challenges, and resources of students pursuing data science.
+
+**Topic 1** focuses on career pathways and expertise in data science, with key terms such as *data*, *science*, *scientists*, and *experience*. FREX terms like *curve*, *developer*, and *scientist* suggest discussions about the learning curve, career roles like data scientist or developer, and the skills required to succeed in the field.
+
+**Topic 2** highlights academic pursuits in data science. Words like *ms*, *universities*, *programs*, and *publication* indicate discussions about choosing the right programs, building academic profiles, and exploring research opportunities in data science. This topic reflects the community’s focus on formal education and credentials.
+
+**Topic 3** revolves around foundational skills and learning resources, with terms like *python*, *bootcamp*, *statistics*, and *words*. FREX terms such as *processing*, *context*, and *linear* suggest that students seek guidance on technical concepts, coding practices, and foundational statistics. It also indicates a strong interest in self-paced learning resources and bootcamps.
+
+**Topic 4** explores challenges and competitions in data science. Key terms like *challenge*, *learning*, *apply*, and *fun* reflect discussions about participating in data challenges and applying theoretical knowledge to practical problems. FREX terms such as *lec* and *https://analyticsindiamag.com/* suggest references to online learning platforms and competitions.
+
+**Topic 5** centers on technical tools and languages commonly used in data science. Words like *python*, *r*, *docker*, and *performance* highlight conversations about the choice of programming languages, the use of tools like Docker, and optimizing models for better performance. FREX terms like *languages*, *set*, and *model* emphasize the practical aspects of building and deploying data science solutions.
+
+Overall, the topics in **r/datasciencestudents** underscore the diverse interests of the community, ranging from academic pursuits and career preparation to technical skill-building and hands-on challenges. These themes highlight the subreddit as a resource-rich platform for students navigating their journeys in data science.
+
+We applied Correlated Structural Topic Modeling (CTM) to analyze discussions across four Reddit communities: **r/learndatascience**, **r/learnmachinelearning**, **r/datascience**, and **r/datasciencestudents**. By distributing documents into five topics per subreddit, CTM helped uncover prevalent themes within these diverse online learning and discussion spaces. In **r/learndatascience**, the focus was on beginner guidance, programming tools, and practical resources, reflecting the subreddit’s role in onboarding newcomers. **r/learnmachinelearning** emphasized technical depth, including statistical methods, career pathways, and programming frameworks like PyTorch and TensorFlow. The **r/datascience** community showcased advanced discussions on career preparation, formal education, and problem-solving techniques. Lastly, **r/datasciencestudents** highlighted academic challenges, skill-building, and participation in competitions. These results provide valuable insights into the experiences, challenges, and resources valued by students and professionals in data science, forming a foundation for exploring richer dynamics using Structural Topic Modeling (STM) with covariates.
+
+
+### Structural Topic Modeling (STM)
+
+Let's go ahead and estimate our structural topic model now. We'll incorporate the `score` variable as a predictor on prevalence.
+
+```{r, echo=TRUE, results='hide'}
+# Learn Data Science STM with covariates
+
+# choosing our number of topics
+
+k <- 5
+
+# specify model
+
+STM_Mod_LDS <- stm(LDS_Dfm_STM,
+               K = k,
+               prevalence = ~ score,
+               data = LDS_merged_data,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+```
+
+For our model, we have selected **K = 5**, corresponding to five distinct topics. The topic prevalence has been set to the *Score* variable, and the maximum number of iterations for model convergence is set to **1,000 epochs**. These configurations will be consistently applied across all subsequent models to maintain integrity and uniformity throughout the analysis.
+
+```{r}
+labelTopics(STM_Mod_LDS)
+```
+```{r}
+plot(STM_Mod_LDS, type = "summary")
+```
+The top words for each topic and the topic proportions plot reveal that the identified topics are reasonable and align with earlier estimations. Topics 1, 2, 4, and 5 prominently feature words like *data*, *learn*, *python*, *use*, and *can*. These top words aptly define the central themes of the topics, which is expected given the focus of these subreddits on learning data science. This finding is consistent with the insights obtained from sentiment analysis and word clouds conducted earlier.
+
+Now let's move forward to analyse the rest of the sub reddits.
+
+```{r, echo=TRUE, results='hide'}
+# Data Science STM with covariates
+
+# choosing our number of topics
+
+k <- 5
+
+# specify model
+
+STM_Mod_DS <- stm(DS_Dfm_STM,
+               K = k,
+               prevalence = ~ score,
+               data = DS_merged_data,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+```
+
+
+```{r}
+labelTopics(STM_Mod_DS)
+```
+
+```{r}
+plot(STM_Mod_DS, type = "summary")
+```
+For the Data Science subreddit, the results align closely with our hypothesis and previous analysis, reinforcing the focus on topics like **data**, **job search**, and **new technologies**. This is evident both from the topic proportion plot and the top words associated with each topic. In all five topics, words like **data**, **SQL**, **Python**, **job**, and **company** appear prominently. This indicates that users in this subreddit are highly engaged in discussions about learning and applying data science skills, while also being concerned with career development and the tools necessary to succeed in the field. It's particularly interesting to see how the various topics revolve around both technical and career-related aspects, suggesting that the subreddit serves as a resource for those looking to not only learn but also advance in their data science careers.
+
+Moving on to Learn Machine Learning sub reddit!
+
+
+```{r, echo=TRUE, results='hide'}
+# Learn Machine Learning STM with covariates
+
+# choosing our number of topics
+
+k <- 5
+
+# specify model
+
+STM_Mod_LML <- stm(LML_Dfm_STM,
+               K = k,
+               prevalence = ~ score,
+               data = LML_merged_data,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+```
+
+
+```{r}
+labelTopics(STM_Mod_LML)
+```
+```{r}
+plot(STM_Mod_LML, type = "summary")
+```
+
+The results from the Structural Topic Model (STM) with covariates reveal distinct thematic clusters related to machine learning and data science discussions. Topic 3, which has the highest proportion of 0.3, is heavily centered around technical and academic themes, with keywords such as "ml," "learning," "math," "ai," and terms like "supervised," "statistical," and "dl" (deep learning). This suggests a focus on theoretical and advanced machine learning concepts, possibly appealing to individuals involved in academic research or deep learning. Other topics, such as Topic 1, highlight more general interest in machine learning (with words like "icml," "ai," and "fascinated") and its applications in diverse fields like biology, indicating interdisciplinary engagement. Topics 2 and 5 are more career-focused, with discussions revolving around job prospects, self-study, and technical skills (e.g., "pytorch," "install," "conda") which emphasize the practical, career-oriented aspects of machine learning.
+
+Overall, the topics suggest that the dataset includes a blend of academic-oriented content (Topic 3) and more practical, career-driven conversations (Topics 2, 4, and 5), highlighting the diverse interests within the machine learning and data science communities.
+```{r, echo=TRUE, results='hide'}
+# Data Science Students STM with covariates
+
+# choosing our number of topics
+
+k <- 5
+
+# specify model
+
+STM_Mod_DSS <- stm(DSS_Dfm_STM,
+               K = k,
+               prevalence = ~ score,
+               data = DSS_merged_data,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+```
+
+```{r}
+labelTopics(STM_Mod_DSS)
+```
+
+
+```{r}
+plot(STM_Mod_DSS, type = "summary")
+```
+
+The STM results for the data science student subreddit highlight two dominant themes: Topic 4 and Topic 1, both focused on "data" and "na" (missing values). Topic 4 addresses practical challenges in data science, particularly dealing with raw data and missing values, while Topic 1 covers broader aspects of the data science field, such as experience and performance metrics. Other topics, like Topic 2 and Topic 3, focus on learning resources, tools like Python and R, and coding techniques but are less prominent. Overall, the findings suggest that students are primarily engaged in data cleaning, handling missing values, and exploring the technical and theoretical aspects of data science.
+
+### Conclusion
+
+This study aimed to explore students' common themes and sentiments regarding their experiences and challenges in learning data science. The research question focused on understanding how students engage with the subject, while the hypothesis posited that students express a mix of excitement and frustration due to the complexity and steep learning curve of data science.
+
+Through a combination of word clouds, dictionary-based sentiment analysis, Topic Modeling (LDA), and Correlated Topic Modeling (STM), we were able to uncover several key themes. Our analysis revealed that the most discussed topics among students revolved around data science tools, techniques, and resources, as well as the handling of raw data and missing values. The sentiment analysis and topic modeling suggested that students are motivated by curiosity and a desire to expand their knowledge, rather than expressing frustration. The predominant feelings were enthusiasm about the potential of data science, coupled with a strong drive for learning and mastering new concepts.
+
+The results aligned with our hypothesis, confirming that students are indeed excited about the opportunities data science offers. While the challenges are acknowledged, particularly in technical areas like handling missing data, the overall sentiment reflected a positive, inquisitive attitude toward overcoming these hurdles. Different subreddits revealed distinct sectors within data science, highlighting various interests and challenges, from coding techniques to more complex analytical methods.
+
+In conclusion, this study underscores the dynamic and diverse ways in which students engage with the field of data science, displaying a strong sense of curiosity, learning, and problem-solving throughout their journeys.
+
